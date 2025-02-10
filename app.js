@@ -4,11 +4,14 @@ var path = require('path');
 var cookieParser = require('cookie-parser');
 var logger = require('morgan');
 var mongoose = require('mongoose');
+var protect = require("./middleware/authMiddleware");
 
-var indexRouter = require('./routes/index');
+var authRouter = require('./routes/auth');
 var foodsRouter = require('./routes/foods');
 
 var app = express();
+
+require("dotenv").config();
 
 // view engine setup
 app.set('views', path.join(__dirname, 'views'));
@@ -20,7 +23,13 @@ app.use(express.urlencoded({ extended: false }));
 app.use(cookieParser());
 app.use(express.static(path.join(__dirname, 'public')));
 
-app.use('/', indexRouter);
+// Apply protect middleware globally (except for auth routes)
+app.use((req, res, next) => {
+  if (req.path.startsWith("/api/auth")) return next(); // Allow login/register
+  protect(req, res, next);
+});
+
+app.use('/api/auth', authRouter);
 app.use('/api/foods', foodsRouter);
 
 // catch 404 and forward to error handler
@@ -41,7 +50,9 @@ app.use(function(err, req, res, next) {
 
 mongoose.set('debug', true);
 
-mongoose.connect("mongodb+srv://fannylim:OJbEYKC9StG2j3rp@easybitesdb.pi0qk.mongodb.net/EasyBites?retryWrites=true&w=majority&appName=EasyBitesDB")
+const mongoURI = `mongodb+srv://${process.env.MONGODB_USERNAME}:${process.env.MONGODB_PASS}@easybitesdb.pi0qk.mongodb.net/${process.env.MONGODB_DBNAME}?retryWrites=true&w=majority&appName=EasyBitesDB`;
+
+mongoose.connect(mongoURI)
     .then(() => console.log("Connected to database!"))
     .catch((err) => console.error("Connection failed:", err));
 
